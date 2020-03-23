@@ -2,3 +2,4 @@
 chest_xray/
 *.pdf
 *.h5
+__pycache__

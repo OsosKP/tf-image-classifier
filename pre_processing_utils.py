@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import multiprocessing
+import shutil
 
 from tqdm import tqdm
 from matplotlib.image import imread
@@ -11,6 +12,7 @@ from PIL import Image
 
 
 root_data_dir = './chest_xray'
+gan_train_path = root_data_dir + '/gan_train'
 test_path = root_data_dir + '/test'
 train_path = root_data_dir + '/train'
 validation_path = root_data_dir + '/val'
@@ -18,6 +20,28 @@ normal_path = '/NORMAL'
 pneumonia_path = '/PNEUMONIA'
 
 flip_transformation = 'flip'
+rotation_transformation = 'rotation'
+
+
+def populate_gan_normal_trinaing_data():
+    if not os.path.exists(gan_train_path):
+        print('GAN training data has not been initialized...populating folder with normal data')
+        os.mkdir(gan_train_path)
+        os.mkdir(gan_train_path+normal_path)
+        copy_data(test_path+normal_path, gan_train_path+normal_path)
+        copy_data(train_path+normal_path, gan_train_path+normal_path)
+        copy_data(validation_path+normal_path, gan_train_path+normal_path)
+    else:
+        print('GAN training folder initialized')
+
+
+def copy_data(src, dest):
+    test_normal_files = os.listdir(src)
+    for file_name in test_normal_files:
+        absolute_path = os.path.abspath(
+            os.path.join(src, file_name))
+        if (os.path.isfile(absolute_path)):
+            shutil.copy(absolute_path, dest)
 
 
 def check_data_exists():
@@ -68,7 +92,7 @@ def get_dimensions_from_folder(image_folder, path):
     dim2 = []
 
     for image_filename in os.listdir(image_folder + path):
-        if (image_filename != '.DS_Store'):
+        if (image_filename != '.DS_Store' and not is_transformation(image_filename)):
             img = imread(image_folder + path + '/' + image_filename)
             if (len(img.shape) > 2):
                 d1, d2, _ = img.shape
@@ -100,6 +124,26 @@ def flipImages():
         print("Critical error reached when applying transformations")
 
 
+def rotateImages():
+    tasks = [
+        [test_path, normal_path, rotation_transformation],
+        [test_path, pneumonia_path, rotation_transformation],
+        [train_path, normal_path, rotation_transformation],
+        [train_path, pneumonia_path, rotation_transformation],
+        [validation_path, normal_path, rotation_transformation],
+        [validation_path, pneumonia_path, rotation_transformation]
+    ]
+    try:
+        print("Performing rotation transformations: ")
+        process_pool = Pool()
+        for _ in tqdm(process_pool.imap_unordered(apply_transformation_to_folder, tasks), desc='Data-Directories Transformed: ', total=len(tasks), unit=' DIR'):
+            pass
+        process_pool.close()
+        process_pool.join()
+    except ValueError:
+        print("Critical error reached when applying transformations")
+
+
 def apply_transformation_to_folder(task):
     image_folder = task[0]
     path = task[1]
@@ -112,7 +156,7 @@ def apply_transformation_to_folder(task):
     # Applying specified transform
     for image_filename in os.listdir(image_folder + path):
         transformed_images = []
-        if (image_filename != '.DS_Store' and not is_transformed_image(image_filename, transformation)):
+        if (image_filename != '.DS_Store' and not is_transformation(image_filename)):
             img = imread(image_folder + path + '/' + image_filename)
 
             # Converting grey-scale to RGB -- needed for tf.convert_to_tensor()
@@ -120,17 +164,26 @@ def apply_transformation_to_folder(task):
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
             tf_img = tf.convert_to_tensor(img)
+            image_filename = image_filename.split('.')[0]
 
+            # Flip Transform
             if (transformation == flip_transformation):
-                image_filename = image_filename.split('.')[0]
                 transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [tf.image.random_flip_up_down(tf_img), image_filename + '-RandFlipUD'], [
                     tf.image.flip_left_right(tf_img), image_filename + '-FlipLR'], [tf.image.random_flip_left_right(tf_img), image_filename + '-RandFlipLR']]
+            if (transformation == rotation_transformation):
+                # k = number of anti-clockwise 90 degree rotations
+                transformed_images += [[tf.image.rot90(tf_img, k=1), image_filename + '-Rotation90'], [
+                    tf.image.rot90(tf_img, k=2), image_filename + '-Rotation180']]
             # Saving the specified transform to the file-system
             for transformed_image in transformed_images:
                 img, imgName = transformed_image
                 img_to_save = tf.io.encode_jpeg(img)
                 tf.io.write_file(os.path.join(
                     image_folder+path + '/'+imgName+'.jpeg'), img_to_save)
+
+
+def is_transformation(image_filename):
+    return is_transformed_image(image_filename, flip_transformation) or is_transformed_image(image_filename, rotation_transformation)
 
 
 def is_transformed_image(image_filename, transformation):

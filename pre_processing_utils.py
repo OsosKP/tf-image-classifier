@@ -10,8 +10,7 @@ from matplotlib.image import imread
 from multiprocessing import Pool
 from PIL import Image
 
-
-root_data_dir = './chest_xray'
+root_data_dir = os.path.abspath('./chest_xray')
 gan_train_path = root_data_dir + '/gan_train'
 test_path = root_data_dir + '/test'
 train_path = root_data_dir + '/train'
@@ -46,7 +45,7 @@ def copy_data(src, dest):
 
 def check_data_exists():
     if not os.path.exists(root_data_dir) or not os.path.exists(test_path) or not os.path.exists(train_path) or not os.path.exists(validation_path):
-        print('dataset has not been downloaded or is not within this directory')
+        print('dataset has not been downloaded or is not within this directory -- please resolve before continueing....')
     else:
         print('test data location = ' + test_path + "\ntraining data location = " +
               train_path + "\nvalidation data location = " + validation_path)

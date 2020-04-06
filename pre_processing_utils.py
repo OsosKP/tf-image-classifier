@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import multiprocessing
+import shutil
 
 from tqdm import tqdm
 from matplotlib.image import imread
@@ -11,6 +12,7 @@ from PIL import Image
 
 
 root_data_dir = './chest_xray'
+gan_train_path = root_data_dir + '/gan_train'
 test_path = root_data_dir + '/test'
 train_path = root_data_dir + '/train'
 validation_path = root_data_dir + '/val'
@@ -19,6 +21,27 @@ pneumonia_path = '/PNEUMONIA'
 
 flip_transformation = 'flip'
 rotation_transformation = 'rotation'
+
+
+def populate_gan_normal_trinaing_data():
+    if not os.path.exists(gan_train_path):
+        print('GAN training data has not been initialized...populating folder with normal data')
+        os.mkdir(gan_train_path)
+        os.mkdir(gan_train_path+normal_path)
+        copy_data(test_path+normal_path, gan_train_path+normal_path)
+        copy_data(train_path+normal_path, gan_train_path+normal_path)
+        copy_data(validation_path+normal_path, gan_train_path+normal_path)
+    else:
+        print('GAN training folder initialized')
+
+
+def copy_data(src, dest):
+    test_normal_files = os.listdir(src)
+    for file_name in test_normal_files:
+        absolute_path = os.path.abspath(
+            os.path.join(src, file_name))
+        if (os.path.isfile(absolute_path)):
+            shutil.copy(absolute_path, dest)
 
 
 def check_data_exists():

@@ -5,7 +5,6 @@ import cv2
 import multiprocessing
 import shutil
 
-from tqdm import tqdm
 from matplotlib.image import imread
 from multiprocessing import Pool
 from PIL import Image
@@ -105,7 +104,7 @@ def get_dimensions_from_folder(image_folder, path):
     return [dim1, dim2]
 
 
-def flipImages():
+def get_flip_images_tasks():
     tasks = [
         [test_path, normal_path, flip_transformation],
         [test_path, pneumonia_path, flip_transformation],
@@ -114,19 +113,10 @@ def flipImages():
         [validation_path, normal_path, flip_transformation],
         [validation_path, pneumonia_path, flip_transformation]
     ]
-
-    try:
-        print("Performing flip transformations: ")
-        process_pool = Pool()
-        for _ in tqdm(process_pool.imap_unordered(apply_transformation_to_folder, tasks), desc='Data-Directories Transformed: ', total=len(tasks), unit=' DIR'):
-            pass
-        process_pool.close()
-        process_pool.join()
-    except ValueError:
-        print("Critical error reached when applying transformations")
+    return tasks
 
 
-def rotateImages():
+def get_rotate_images_tasks():
     tasks = [
         [test_path, normal_path, rotation_transformation],
         [test_path, pneumonia_path, rotation_transformation],
@@ -135,15 +125,7 @@ def rotateImages():
         [validation_path, normal_path, rotation_transformation],
         [validation_path, pneumonia_path, rotation_transformation]
     ]
-    try:
-        print("Performing rotation transformations: ")
-        process_pool = Pool()
-        for _ in tqdm(process_pool.imap_unordered(apply_transformation_to_folder, tasks), desc='Data-Directories Transformed: ', total=len(tasks), unit=' DIR'):
-            pass
-        process_pool.close()
-        process_pool.join()
-    except ValueError:
-        print("Critical error reached when applying transformations")
+    return tasks
 
 
 def apply_transformation_to_folder(task):
@@ -174,8 +156,8 @@ def apply_transformation_to_folder(task):
                     tf.image.flip_left_right(tf_img), image_filename + '-FlipLR'], [tf.image.random_flip_left_right(tf_img), image_filename + '-RandFlipLR']]
             if (transformation == rotation_transformation):
                 # k = number of anti-clockwise 90 degree rotations
-                transformed_images += [[tf.image.rot90(tf_img, k=1), image_filename + '-Rotation90'], [
-                    tf.image.rot90(tf_img, k=2), image_filename + '-Rotation180']]
+                transformed_images += [
+                    [tf.image.rot90(tf_img, k=1), image_filename + '-Rotation90']]
             # Saving the specified transform to the file-system
             for transformed_image in transformed_images:
                 img, imgName = transformed_image

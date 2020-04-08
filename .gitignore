@@ -3,3 +3,4 @@ chest_xray/
 *.pdf
 *.h5
 __pycache__
+.DS_STORE

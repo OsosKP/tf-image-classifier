@@ -3,11 +3,8 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import multiprocessing
-import shutil
 
-from tqdm import tqdm
 from matplotlib.image import imread
-from multiprocessing import Pool
 from PIL import Image
 
 root_data_dir = os.path.abspath('./chest_xray')
@@ -20,27 +17,18 @@ pneumonia_path = '/PNEUMONIA'
 
 flip_transformation = 'flip'
 rotation_transformation = 'rotation'
+equalize_data_transformation = 'rand_flip_transform'
+scale_transformation = 'scale'
+translation_transformation = 'translate'
+noise_transformation = 'noise'
 
 
-def populate_gan_normal_trinaing_data():
-    if not os.path.exists(gan_train_path):
-        print('GAN training data has not been initialized...populating folder with normal data')
-        os.mkdir(gan_train_path)
-        os.mkdir(gan_train_path+normal_path)
-        copy_data(test_path+normal_path, gan_train_path+normal_path)
-        copy_data(train_path+normal_path, gan_train_path+normal_path)
-        copy_data(validation_path+normal_path, gan_train_path+normal_path)
-    else:
-        print('GAN training folder initialized')
-
-
-def copy_data(src, dest):
-    test_normal_files = os.listdir(src)
-    for file_name in test_normal_files:
-        absolute_path = os.path.abspath(
-            os.path.join(src, file_name))
-        if (os.path.isfile(absolute_path)):
-            shutil.copy(absolute_path, dest)
+def get_num_files(folder):
+    numFiles = 0
+    for image_filename in os.listdir(folder):
+        if image_filename.endswith('.jpeg'):
+            numFiles += 1
+    return numFiles
 
 
 def check_data_exists():
@@ -52,41 +40,6 @@ def check_data_exists():
     else:
         print('test data location = ' + test_path + "\ntraining data location = " +
               train_path + "\nvalidation data location = " + validation_path)
-
-
-# returns the average dimensions of the images in the data-set
-def get_average_dimensions():
-    dim1 = []
-    dim2 = []
-
-    # Getting the dimensions of the testing data
-    test_dim_normal_1, test_dim_normal_2 = get_dimensions_from_folder(
-        test_path, normal_path)
-    test_dim_pneumonia_1, test_dim_pneumonia_2 = get_dimensions_from_folder(
-        test_path, pneumonia_path)
-
-    dim1 += test_dim_normal_1 + test_dim_pneumonia_1
-    dim2 += test_dim_normal_2 + test_dim_pneumonia_2
-
-    # Getting the dimensions of the training data
-    train_dim_normal_1, train_dim_normal_2 = get_dimensions_from_folder(
-        train_path, normal_path)
-    train_dim_pneumonia_1, train_dim_pneumonia_2 = get_dimensions_from_folder(
-        train_path, pneumonia_path)
-
-    dim1 += train_dim_normal_1 + train_dim_pneumonia_1
-    dim2 += train_dim_normal_2 + train_dim_pneumonia_2
-
-    # Getting the dimensions of the validation data
-    val_dim_normal_1, val_dim_normal_2 = get_dimensions_from_folder(
-        validation_path, normal_path)
-    val_dim_pneumonia_1, val_dim_pneumonia_2 = get_dimensions_from_folder(
-        validation_path, pneumonia_path)
-
-    dim1 += val_dim_normal_1 + val_dim_pneumonia_1
-    dim2 += val_dim_normal_2 + train_dim_pneumonia_2
-
-    return [np.round(np.mean(dim1)), np.round(np.mean(dim2))]
 
 
 def get_dimensions_from_folder(image_folder, path):
@@ -105,48 +58,47 @@ def get_dimensions_from_folder(image_folder, path):
     return [dim1, dim2]
 
 
-def flipImages():
+def get_flip_images_tasks(root_dir):
     tasks = [
-        [test_path, normal_path, flip_transformation],
-        [test_path, pneumonia_path, flip_transformation],
-        [train_path, normal_path, flip_transformation],
-        [train_path, pneumonia_path, flip_transformation],
-        [validation_path, normal_path, flip_transformation],
-        [validation_path, pneumonia_path, flip_transformation]
+        [root_dir, normal_path, flip_transformation],
+        [root_dir, pneumonia_path, flip_transformation]
     ]
-
-    try:
-        print("Performing flip transformations: ")
-        process_pool = Pool()
-        for _ in tqdm(process_pool.imap_unordered(apply_transformation_to_folder, tasks), desc='Data-Directories Transformed: ', total=len(tasks), unit=' DIR'):
-            pass
-        process_pool.close()
-        process_pool.join()
-    except ValueError:
-        print("Critical error reached when applying transformations")
+    return tasks
 
 
-def rotateImages():
+def get_rotate_images_tasks(root_dir):
     tasks = [
-        [test_path, normal_path, rotation_transformation],
-        [test_path, pneumonia_path, rotation_transformation],
-        [train_path, normal_path, rotation_transformation],
-        [train_path, pneumonia_path, rotation_transformation],
-        [validation_path, normal_path, rotation_transformation],
-        [validation_path, pneumonia_path, rotation_transformation]
+        [root_dir, normal_path, rotation_transformation],
+        [root_dir, pneumonia_path, rotation_transformation],
     ]
-    try:
-        print("Performing rotation transformations: ")
-        process_pool = Pool()
-        for _ in tqdm(process_pool.imap_unordered(apply_transformation_to_folder, tasks), desc='Data-Directories Transformed: ', total=len(tasks), unit=' DIR'):
-            pass
-        process_pool.close()
-        process_pool.join()
-    except ValueError:
-        print("Critical error reached when applying transformations")
+    return tasks
 
 
-def apply_transformation_to_folder(task):
+def get_scale_images_tasks(root_dir):
+    tasks = [
+        [root_dir, normal_path, scale_transformation],
+        [root_dir, pneumonia_path, scale_transformation]
+    ]
+    return tasks
+
+
+def get_translation_image_tasks(root_dir):
+    tasks = [
+        [root_dir, normal_path, translation_transformation],
+        [root_dir, pneumonia_path, translation_transformation]
+    ]
+    return tasks
+
+
+def get_noise_image_tasks(root_dir):
+    tasks = [
+        [root_dir, normal_path, noise_transformation],
+        [root_dir, pneumonia_path, noise_transformation]
+    ]
+    return tasks
+
+
+def apply_transformation_to_folder(task, num_transformations=-1):
     image_folder = task[0]
     path = task[1]
     transformation = task[2]
@@ -158,7 +110,7 @@ def apply_transformation_to_folder(task):
     # Applying specified transform
     for image_filename in os.listdir(image_folder + path):
         transformed_images = []
-        if (image_filename != '.DS_Store' and not is_transformation(image_filename)):
+        if (image_filename.endswith('.jpeg') and not is_transformation(image_filename) and (num_transformations == -1 or num_transformations > 0)):
             img = imread(image_folder + path + '/' + image_filename)
 
             # Converting grey-scale to RGB -- needed for tf.convert_to_tensor()
@@ -170,12 +122,80 @@ def apply_transformation_to_folder(task):
 
             # Flip Transform
             if (transformation == flip_transformation):
-                transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [tf.image.random_flip_up_down(tf_img), image_filename + '-RandFlipUD'], [
-                    tf.image.flip_left_right(tf_img), image_filename + '-FlipLR'], [tf.image.random_flip_left_right(tf_img), image_filename + '-RandFlipLR']]
+                transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [
+                    tf.image.flip_left_right(tf_img), image_filename + '-FlipLR']]
+            if (transformation == equalize_data_transformation):
+                transformation_type = np.random.randint(low=0, high=1)
+                if (transformation_type == 0):
+                    transformed_images += [[tf.image.random_flip_up_down(
+                        tf_img), image_filename + '-equalize']]
+                else:
+                    transformed_images += [[tf.image.random_flip_left_right(
+                        tf_img), image_filename + '-equalize']]
+                num_transformations -= 1
             if (transformation == rotation_transformation):
                 # k = number of anti-clockwise 90 degree rotations
-                transformed_images += [[tf.image.rot90(tf_img, k=1), image_filename + '-Rotation90'], [
-                    tf.image.rot90(tf_img, k=2), image_filename + '-Rotation180']]
+                transformed_images += [
+                    [tf.image.rot90(tf_img, k=2), image_filename + '-Rotation120']]
+            if (transformation == scale_transformation):
+                image_height = img.shape[0]
+                image_width = img.shape[1]
+                scale = 0.1
+                # Tensor for up-scaled image dimensions
+                scaled_dims_up_arr = np.array(
+                    [image_height*scale + image_height, image_width*scale + image_width])
+                scale_dims_up_tensor = tf.convert_to_tensor(
+                    scaled_dims_up_arr, dtype=tf.int32)
+                # Tensor for down-scaled image dimensions
+                scaled_dims_down_arr = np.array(
+                    [abs(image_height*scale - image_height), abs(image_width*scale - image_width)])
+                scale_dims_down_tensor = tf.convert_to_tensor(
+                    scaled_dims_down_arr, dtype=tf.int32)
+
+                # Resizing the image by +10% -- tensor is of type float
+                resized_image_up = tf.image.resize(
+                    tf_img, size=scale_dims_up_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                resized_image_up_cropped = tf.image.crop_to_bounding_box(
+                    resized_image_up, 0, 0, image_height, image_width)
+                # Resizing the image by -10% -- tenfor is also of type float
+                resized_image_down = tf.image.resize(
+                    tf_img, size=scale_dims_down_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                resized_image_down_cropped = tf.image.crop_to_bounding_box(
+                    resized_image_up, 0, 0, image_height, image_width)
+                # Casting Tensor to type int so it can be saved to the file system
+                resized_image_up_int = tf.cast(
+                    resized_image_up_cropped, tf.uint8)
+                resized_image_down_int = tf.cast(
+                    resized_image_down_cropped, tf.uint8)
+
+                # Cropping the image back to its original shape
+                transformed_images += [[resized_image_up_int, image_filename+'-scaledUp'], [
+                    resized_image_down_int, image_filename+'-scaledDown']]
+            if (transformation == translation_transformation):
+                # Arrays and tensors defined for resizing later
+                original_image_size = np.array(
+                    [img.shape[0], img.shape[1]])
+                original_image_size_tensor = tf.convert_to_tensor(
+                    original_image_size, dtype=tf.int32)
+                # Performing a random translation with 10% margin for width and height
+                translated_image = tf.keras.preprocessing.image.random_shift(
+                    tf_img, 0.1, 0.1)
+                # Resize image to original size
+                translated_image_resized = tf.image.resize(
+                    translated_image, size=original_image_size_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                translated_image_cropped_int = tf.cast(
+                    translated_image_resized, tf.uint8)
+
+                transformed_images += [[translated_image_cropped_int,
+                                        image_filename+'-randomTranslate']]
+            if(transformation == noise_transformation):
+                # Creating gaussian noise
+                noise = tf.random.normal(shape=tf.shape(
+                    tf_img), mean=0.0, stddev=1.0, dtype=tf.float32)
+                noise_int = tf.cast(noise, tf.uint8)
+                # Adding noise to image
+                noisy_tensor = tf.add(tf_img, noise_int)
+                transformed_images += [[noisy_tensor, image_filename+'-noise']]
             # Saving the specified transform to the file-system
             for transformed_image in transformed_images:
                 img, imgName = transformed_image
@@ -185,7 +205,7 @@ def apply_transformation_to_folder(task):
 
 
 def is_transformation(image_filename):
-    return is_transformed_image(image_filename, flip_transformation) or is_transformed_image(image_filename, rotation_transformation)
+    return is_transformed_image(image_filename, flip_transformation) or is_transformed_image(image_filename, rotation_transformation) or is_transformed_image(image_filename, scale_transformation) or is_transformed_image(image_filename, translation_transformation) or is_transformed_image(image_filename, noise_transformation)
 
 
 def is_transformed_image(image_filename, transformation):

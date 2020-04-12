@@ -7,12 +7,12 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import pandas as pd
+import preprocessing
 
-data_dir = 'chest_xray'
-
-test_path = data_dir + '/test'
-train_path = data_dir + '/train'
-val_path = data_dir + '/val'
+data_dir = preprocessing.root_data_dir
+test_path = preprocessing.test_path
+train_path = preprocessing.train_path
+val_path = preprocessing.validation_path
 image_shape = (300, 300, 3)
 
 loss_param = 'binary_crossentropy'

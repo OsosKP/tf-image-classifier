@@ -21,10 +21,10 @@ noise_transformation = 'noise'
 
 
 def perform_pre_processing_tasks(tasks, description):
-    print('\n'+description, flush=True, end='')
+    print('\n\n\n'+description, flush=True, end='')
     for task in tasks:
         apply_transformation_to_folder(task, -1)
-    print('Completed!', flush=True)
+    print('\n\nCompleted!', flush=True)
 
 
 def equalize_data_with_rand_flips(root_path):
@@ -54,8 +54,9 @@ def augment_training_data():
     original_pneumonia_files_num = get_num_files(pneumonia_data_path)
     # Equalizing the data before applying transformations
     if original_normal_files_num != original_pneumonia_files_num:
-        print('Balancing Data.', flush=True, end='')
+        print('\nBalancing Data.', flush=True)
         equalize_data_with_rand_flips(root_data_path)
+        print('\n\nCompleted!', flush=True)
         perform_pre_processing_tasks(get_flip_images_tasks(
             root_data_path), 'Flipping Images.')
         perform_pre_processing_tasks(get_rotate_images_tasks(

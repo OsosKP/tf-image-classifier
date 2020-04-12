@@ -2,10 +2,8 @@ import os
 import numpy as np
 import tensorflow as tf
 import cv2
-import multiprocessing
 
 from matplotlib.image import imread
-from PIL import Image
 
 root_data_dir = os.path.abspath('./chest_xray')
 gan_train_path = root_data_dir + '/gan_train'
@@ -32,14 +30,18 @@ def get_num_files(folder):
 
 
 def check_data_exists():
-    if not os.path.exists(root_data_dir) or not os.path.exists(test_path) or not os.path.exists(train_path) or not os.path.exists(validation_path):
-        print('dataset has not been downloaded or is not within this directory -- please resolve before continueing....')
-        print('dataset should be included at the same level as this notebook, with the following structure:')
-        print('model.ipynb\npre_processing_utils.py\nchest_xray/\n\ttest/\n\t\tNORMAL/\n\t\tPNEUMONIA/\n\ttrain/\n\t\tNORMAL/\n\t\tPNEUMONIA/\n\tval/\n\t\tNORMAL/\n\t\tPNEUMONIA/')
+    if not os.path.exists(root_data_dir) or \
+            not os.path.exists(test_path) or \
+            not os.path.exists(train_path) or \
+            not os.path.exists(validation_path):
+        print(
+            'dataset is not within this directory -- please resolve before continuing....')
+        print('dataset should be included at his notebook\'s level, with the following structure:')
+        print('model.ipynb\npre_processing_utils.py\nchest_xray/\n\ttest/\n\\t\tNORMAL/\n\t\tPNEUMONIA/\n\ttrain/\n\t\tNORMAL/\n\t\tPNEUMONIA/\n\tval/\n\t\tNORMAL/\n\t\tPNEUMONIA/')
         raise AttributeError('Data not found')
-    else:
-        print('test data location = ' + test_path + "\ntraining data location = " +
-              train_path + "\nvalidation data location = " + validation_path)
+
+    print('test data location = ' + test_path + "\ntraining data location = " +
+          train_path + "\nvalidation data location = " + validation_path)
 
 
 def get_dimensions_from_folder(image_folder, path):
@@ -154,14 +156,16 @@ def apply_transformation_to_folder(task, num_transformations=-1):
 
                 # Resizing the image by +10% -- tensor is of type float
                 resized_image_up = tf.image.resize(
-                    tf_img, size=scale_dims_up_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                    tf_img, size=scale_dims_up_tensor,
+                    method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
                 resized_image_up_cropped = tf.image.crop_to_bounding_box(
                     resized_image_up, 0, 0, image_height, image_width)
                 # Resizing the image by -10% -- tenfor is also of type float
                 resized_image_down = tf.image.resize(
-                    tf_img, size=scale_dims_down_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                    tf_img, size=scale_dims_down_tensor,
+                    method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
                 resized_image_down_cropped = tf.image.crop_to_bounding_box(
-                    resized_image_up, 0, 0, image_height, image_width)
+                    resized_image_down, 0, 0, image_height, image_width)
                 # Casting Tensor to type int so it can be saved to the file system
                 resized_image_up_int = tf.cast(
                     resized_image_up_cropped, tf.uint8)
@@ -171,7 +175,7 @@ def apply_transformation_to_folder(task, num_transformations=-1):
                 # Cropping the image back to its original shape
                 transformed_images += [[resized_image_up_int, image_filename+'-scaledUp'], [
                     resized_image_down_int, image_filename+'-scaledDown']]
-            if (transformation == translation_transformation):
+            if transformation == translation_transformation:
                 # Arrays and tensors defined for resizing later
                 original_image_size = np.array(
                     [img.shape[0], img.shape[1]])
@@ -188,7 +192,7 @@ def apply_transformation_to_folder(task, num_transformations=-1):
 
                 transformed_images += [[translated_image_cropped_int,
                                         image_filename+'-randomTranslate']]
-            if(transformation == noise_transformation):
+            if transformation == noise_transformation:
                 # Creating gaussian noise
                 noise = tf.random.normal(shape=tf.shape(
                     tf_img), mean=0.0, stddev=1.0, dtype=tf.float32)
@@ -205,10 +209,14 @@ def apply_transformation_to_folder(task, num_transformations=-1):
 
 
 def is_transformation(image_filename):
-    return is_transformed_image(image_filename, flip_transformation) or is_transformed_image(image_filename, rotation_transformation) or is_transformed_image(image_filename, scale_transformation) or is_transformed_image(image_filename, translation_transformation) or is_transformed_image(image_filename, noise_transformation)
+    return is_transformed_image(image_filename, flip_transformation) or \
+        is_transformed_image(image_filename, rotation_transformation) or \
+        is_transformed_image(image_filename, scale_transformation) or \
+        is_transformed_image(image_filename, translation_transformation) or \
+        is_transformed_image(image_filename, noise_transformation)
 
 
 def is_transformed_image(image_filename, transformation):
     name_with_extension = image_filename.split('/')[-1]
     image_name_lowercase = name_with_extension.split('.')[0].lower()
-    return (transformation in image_name_lowercase)
+    return transformation in image_name_lowercase

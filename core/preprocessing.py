@@ -4,7 +4,6 @@ import tensorflow as tf
 import cv2
 
 from matplotlib.image import imread
-from IPython.display import clear_output
 
 root_data_dir = os.path.abspath('./chest_xray')
 test_path = root_data_dir + '/test'
@@ -21,51 +20,28 @@ translation_transformation = 'translate'
 noise_transformation = 'noise'
 
 
-def update_progress(progress, description):
-    bar_length = 20
-    if isinstance(progress, int):
-        progress = float(progress)
-    if not isinstance(progress, float):
-        progress = 0
-    if progress < 0:
-        progress = 0
-    if progress >= 1:
-        progress = 1
-    block = int(round(bar_length * progress))
-    clear_output(wait=True)
-    text = description + \
-        " [{0}] {1:.1f}%".format(
-            "#" * block + "-" * (bar_length - block), progress * 100)
-    print(text)
-
-
 def perform_pre_processing_tasks(tasks, description):
-    update_progress(0, description)
-    work_done = 0
-    total_work = len(tasks)
+    print('\n'+description, flush=True, end='')
     for task in tasks:
         apply_transformation_to_folder(task, -1)
-        work_done += 1
-        update_progress(work_done / total_work, description)
-    update_progress(1, description)
+    print('Completed!', flush=True)
 
 
 def equalize_data_with_rand_flips(root_path):
     normal_data_path = root_path + normal_path
     normal_files = get_num_files(normal_data_path)
-
     pneumonia_data_path = root_path + pneumonia_path
     pneumonia_files = get_num_files(pneumonia_data_path)
 
     diff = abs(normal_files - pneumonia_files)
-    print(diff)
     if normal_files < pneumonia_files:
         task = [root_path, normal_path,
                 equalize_data_transformation]
     else:
         task = [root_path, pneumonia_path,
                 equalize_data_transformation]
-    apply_transformation_to_folder(task, diff)
+    while(diff > 0):
+        diff = apply_transformation_to_folder(task, diff)
 
 
 def augment_training_data():
@@ -73,25 +49,23 @@ def augment_training_data():
     # Defining the data paths for the given root dir
     normal_data_path = root_data_path + normal_path
     pneumonia_data_path = root_data_path + pneumonia_path
+
+    original_normal_files_num = get_num_files(normal_data_path)
+    original_pneumonia_files_num = get_num_files(pneumonia_data_path)
     # Equalizing the data before applying transformations
-    if get_num_files(normal_data_path) != \
-            get_num_files(pneumonia_data_path):
+    if original_normal_files_num != original_pneumonia_files_num:
+        print('Balancing Data.', flush=True, end='')
         equalize_data_with_rand_flips(root_data_path)
         perform_pre_processing_tasks(get_flip_images_tasks(
-            root_data_path), 'Flipping Images Progress:')
-        update_progress(1, 'Flipping Images Progress:')
+            root_data_path), 'Flipping Images.')
         perform_pre_processing_tasks(get_rotate_images_tasks(
-            root_data_path), 'Rotating Images Progress:')
-        update_progress(1, 'Rotating Images Progress:')
+            root_data_path), 'Rotating Images.')
         perform_pre_processing_tasks(get_scale_images_tasks(
-            root_data_path), 'Scaling Images Progress:')
-        update_progress(1, 'Scaling Images Progress:')
+            root_data_path), 'Scaling Images.')
         perform_pre_processing_tasks(get_translation_image_tasks(
-            root_data_path), 'Translating Images Progress:')
-        update_progress(1, 'Translating Images Progress:')
+            root_data_path), 'Translating Images.')
         perform_pre_processing_tasks(get_noise_image_tasks(
-            root_data_path), 'Adding Noise to Images Progress:')
-        update_progress(1, 'Adding Noise to Images Progress:')
+            root_data_path), 'Adding Noise to Images.')
 
 
 def get_num_files(folder):
@@ -183,14 +157,14 @@ def apply_transformation_to_folder(task, num_transformations=-1):
             if (transformation == flip_transformation):
                 transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [
                     tf.image.flip_left_right(tf_img), image_filename + '-FlipLR']]
-            if (transformation == equalize_data_transformation):
+            if (transformation == equalize_data_transformation and not is_added_image(image_filename)):
                 transformation_type = np.random.randint(low=0, high=1)
                 if (transformation_type == 0):
                     transformed_images += [[tf.image.random_flip_up_down(
-                        tf_img), image_filename + '-equalize']]
+                        tf_img), image_filename + '-equalize' + str(num_transformations)]]
                 else:
                     transformed_images += [[tf.image.random_flip_left_right(
-                        tf_img), image_filename + '-equalize']]
+                        tf_img), image_filename + '-equalize' + str(num_transformations)]]
                 num_transformations -= 1
             if (transformation == rotation_transformation):
                 # k = number of anti-clockwise 90 degree rotations
@@ -221,13 +195,11 @@ def apply_transformation_to_folder(task, num_transformations=-1):
                 resized_image_down = tf.image.resize(
                     tf_img, size=scale_dims_down_tensor,
                     method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
-                resized_image_down_cropped = tf.image.crop_to_bounding_box(
-                    resized_image_down, 0, 0, image_height, image_width)
                 # Casting Tensor to type int so it can be saved to the file system
                 resized_image_up_int = tf.cast(
                     resized_image_up_cropped, tf.uint8)
                 resized_image_down_int = tf.cast(
-                    resized_image_down_cropped, tf.uint8)
+                    resized_image_down, tf.uint8)
 
                 # Cropping the image back to its original shape
                 transformed_images += [[resized_image_up_int, image_filename+'-scaledUp'], [
@@ -263,6 +235,11 @@ def apply_transformation_to_folder(task, num_transformations=-1):
                 img_to_save = tf.io.encode_jpeg(img)
                 tf.io.write_file(os.path.join(
                     image_folder+path + '/'+imgName+'.jpeg'), img_to_save)
+                print('.', end='', flush=True)
+    if (num_transformations > 0):
+        return num_transformations
+    else:
+        return 0
 
 
 def is_transformation(image_filename):
@@ -277,6 +254,12 @@ def is_transformed_image(image_filename, transformation):
     name_with_extension = image_filename.split('/')[-1]
     image_name_lowercase = name_with_extension.split('.')[0].lower()
     return transformation in image_name_lowercase
+
+
+def is_added_image(image_filename):
+    name_with_extension = image_filename.split('/')[-1]
+    image_name_lowercase = name_with_extension.split('.')[0].lower()
+    return 'equalize' in image_name_lowercase
 
 
 check_data_exists()

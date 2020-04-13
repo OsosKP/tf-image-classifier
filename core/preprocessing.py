@@ -71,9 +71,9 @@ def cache_balanced_dataset(folder_path):
     balance_dataset = np.array([])
 
     for image_filename in os.listdir(folder_path):
-        file_location = os.path.join(folder_path + '/' + image_filename)
-        balance_dataset = np.append(balance_dataset, file_location)
-
+        if ('.jpeg' in image_filename):
+            file_location = os.path.join(folder_path + '/' + image_filename)
+            balance_dataset = np.append(balance_dataset, file_location)
     if (normal_path in folder_path):
         file_name = 'normal_cache.txt'
     else:
@@ -236,101 +236,103 @@ def apply_transformation_to_folder(task, description, num_transformations=-1):
     # Applying specified transform
     for file_path in images_locations:
         # Getting the image name from the full filepath saved
-        image_filename = file_path.split('/')[-1]
-        transformed_images = []
-        # Sanity check to determine if we are dealing with the correct data
-        if (image_filename.endswith('.jpeg') and not is_transformation(image_filename) and (num_transformations == -1 or num_transformations > 0)):
-            img = imread(file_path)
+        if ('.jpeg' in file_path):
+            image_filename = file_path.split('/')[-1]
+            transformed_images = []
+            # Sanity check to determine if we are dealing with the correct data
+            if (image_filename.endswith('.jpeg') and not is_transformation(image_filename) and (num_transformations == -1 or num_transformations > 0)):
+                img = imread(file_path)
 
-            # Converting grey-scale to RGB -- needed for tf.convert_to_tensor()
-            if (len(img.shape) < 3):
-                img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+                # Converting grey-scale to RGB -- needed for tf.convert_to_tensor()
+                if (len(img.shape) < 3):
+                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
-            tf_img = tf.convert_to_tensor(img)
-            image_filename = image_filename.split('.')[0]
+                tf_img = tf.convert_to_tensor(img)
+                image_filename = image_filename.split('.')[0]
 
-            # Flip Transform
-            if (transformation == flip_transformation):
-                transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [
-                    tf.image.flip_left_right(tf_img), image_filename + '-FlipLR']]
-            # 180DEG Transformation
-            if (transformation == rotation_transformation):
-                # k = number of anti-clockwise 90 degree rotations
-                transformed_images += [
-                    [tf.image.rot90(tf_img, k=2), image_filename + '-Rotation120']]
-            # Scale Transformation
-            if (transformation == scale_transformation):
-                image_height = img.shape[0]
-                image_width = img.shape[1]
-                scale = 0.1
-                # Tensor for up-scaled image dimensions
-                scaled_dims_up_arr = np.array(
-                    [image_height*scale + image_height, image_width*scale + image_width])
-                scale_dims_up_tensor = tf.convert_to_tensor(
-                    scaled_dims_up_arr, dtype=tf.int32)
-                # Tensor for down-scaled image dimensions
-                scaled_dims_down_arr = np.array(
-                    [abs(image_height*scale - image_height), abs(image_width*scale - image_width)])
-                scale_dims_down_tensor = tf.convert_to_tensor(
-                    scaled_dims_down_arr, dtype=tf.int32)
+                # Flip Transform
+                if (transformation == flip_transformation):
+                    transformed_images += [[tf.image.flip_up_down(tf_img), image_filename + '-FlipUD'], [
+                        tf.image.flip_left_right(tf_img), image_filename + '-FlipLR']]
+                # 180DEG Transformation
+                if (transformation == rotation_transformation):
+                    # k = number of anti-clockwise 90 degree rotations
+                    transformed_images += [
+                        [tf.image.rot90(tf_img, k=2), image_filename + '-Rotation120']]
+                # Scale Transformation
+                if (transformation == scale_transformation):
+                    image_height = img.shape[0]
+                    image_width = img.shape[1]
+                    scale = 0.1
+                    # Tensor for up-scaled image dimensions
+                    scaled_dims_up_arr = np.array(
+                        [image_height*scale + image_height, image_width*scale + image_width])
+                    scale_dims_up_tensor = tf.convert_to_tensor(
+                        scaled_dims_up_arr, dtype=tf.int32)
+                    # Tensor for down-scaled image dimensions
+                    scaled_dims_down_arr = np.array(
+                        [abs(image_height*scale - image_height), abs(image_width*scale - image_width)])
+                    scale_dims_down_tensor = tf.convert_to_tensor(
+                        scaled_dims_down_arr, dtype=tf.int32)
 
-                # Resizing the image by +10% -- tensor is of type float
-                resized_image_up = tf.image.resize(
-                    tf_img, size=scale_dims_up_tensor,
-                    method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
-                resized_image_up_cropped = tf.image.crop_to_bounding_box(
-                    resized_image_up, 0, 0, image_height, image_width)
-                # Resizing the image by -10% -- tenfor is also of type float
-                resized_image_down = tf.image.resize(
-                    tf_img, size=scale_dims_down_tensor,
-                    method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
-                # Casting Tensor to type int so it can be saved to the file system
-                resized_image_up_int = tf.cast(
-                    resized_image_up_cropped, tf.uint8)
-                resized_image_down_int = tf.cast(
-                    resized_image_down, tf.uint8)
+                    # Resizing the image by +10% -- tensor is of type float
+                    resized_image_up = tf.image.resize(
+                        tf_img, size=scale_dims_up_tensor,
+                        method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                    resized_image_up_cropped = tf.image.crop_to_bounding_box(
+                        resized_image_up, 0, 0, image_height, image_width)
+                    # Resizing the image by -10% -- tenfor is also of type float
+                    resized_image_down = tf.image.resize(
+                        tf_img, size=scale_dims_down_tensor,
+                        method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                    # Casting Tensor to type int so it can be saved to the file system
+                    resized_image_up_int = tf.cast(
+                        resized_image_up_cropped, tf.uint8)
+                    resized_image_down_int = tf.cast(
+                        resized_image_down, tf.uint8)
 
-                # Cropping the image back to its original shape
-                transformed_images += [[resized_image_up_int, image_filename+'-scaledUp'], [
-                    resized_image_down_int, image_filename+'-scaledDown']]
-            if transformation == translation_transformation:
-                # Arrays and tensors defined for resizing later
-                original_image_size = np.array(
-                    [img.shape[0], img.shape[1]])
-                original_image_size_tensor = tf.convert_to_tensor(
-                    original_image_size, dtype=tf.int32)
-                # Performing a random translation with 10% margin for width and height
-                translated_image = tf.keras.preprocessing.image.random_shift(
-                    tf_img, 0.1, 0.1)
-                # Resize image to original size
-                translated_image_resized = tf.image.resize(
-                    translated_image, size=original_image_size_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
-                translated_image_cropped_int = tf.cast(
-                    translated_image_resized, tf.uint8)
+                    # Cropping the image back to its original shape
+                    transformed_images += [[resized_image_up_int, image_filename+'-scaledUp'], [
+                        resized_image_down_int, image_filename+'-scaledDown']]
+                if transformation == translation_transformation:
+                    # Arrays and tensors defined for resizing later
+                    original_image_size = np.array(
+                        [img.shape[0], img.shape[1]])
+                    original_image_size_tensor = tf.convert_to_tensor(
+                        original_image_size, dtype=tf.int32)
+                    # Performing a random translation with 10% margin for width and height
+                    translated_image = tf.keras.preprocessing.image.random_shift(
+                        tf_img, 0.1, 0.1)
+                    # Resize image to original size
+                    translated_image_resized = tf.image.resize(
+                        translated_image, size=original_image_size_tensor, method=tf.image.ResizeMethod.BILINEAR, preserve_aspect_ratio=True)
+                    translated_image_cropped_int = tf.cast(
+                        translated_image_resized, tf.uint8)
 
-                transformed_images += [[translated_image_cropped_int,
-                                        image_filename+'-randomTranslate']]
-            if transformation == noise_transformation:
-                # Creating gaussian noise
-                noise = tf.random.normal(shape=tf.shape(
-                    tf_img), mean=0.0, stddev=1.0, dtype=tf.float32)
-                noise_int = tf.cast(noise, tf.uint8)
-                # Adding noise to image
-                noisy_tensor = tf.add(tf_img, noise_int)
-                transformed_images += [[noisy_tensor, image_filename+'-noise']]
-            # Saving the specified transform to the file-system
-            for transformed_image in transformed_images:
-                img, imgName = transformed_image
-                img_to_save = tf.io.encode_jpeg(img)
-                tf.io.write_file(os.path.join(
-                    image_folder+path + '/'+imgName+'.jpeg'), img_to_save)
-                update_progress(
-                    (total_transformations - num_transformations) / total_transformations, description)
-                if (num_transformations == 0):
-                    update_progress(1, description)
-                    break
-                elif (num_transformations != -1):
-                    num_transformations -= 1
+                    transformed_images += [[translated_image_cropped_int,
+                                            image_filename+'-randomTranslate']]
+                if transformation == noise_transformation:
+                    # Creating gaussian noise
+                    noise = tf.random.normal(shape=tf.shape(
+                        tf_img), mean=0.0, stddev=1.0, dtype=tf.float32)
+                    noise_int = tf.cast(noise, tf.uint8)
+                    # Adding noise to image
+                    noisy_tensor = tf.add(tf_img, noise_int)
+                    transformed_images += [[noisy_tensor,
+                                            image_filename+'-noise']]
+                # Saving the specified transform to the file-system
+                for transformed_image in transformed_images:
+                    img, imgName = transformed_image
+                    img_to_save = tf.io.encode_jpeg(img)
+                    tf.io.write_file(os.path.join(
+                        image_folder+path + '/'+imgName+'.jpeg'), img_to_save)
+                    update_progress(
+                        (total_transformations - num_transformations) / total_transformations, description)
+                    if (num_transformations == 0):
+                        update_progress(1, description)
+                        break
+                    elif (num_transformations != -1):
+                        num_transformations -= 1
 
 
 def is_transformation(image_filename):

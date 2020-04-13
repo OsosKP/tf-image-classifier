@@ -71,9 +71,9 @@ def cache_balanced_dataset(folder_path):
     balance_dataset = np.array([])
 
     for image_filename in os.listdir(folder_path):
-        file_location = os.path.join(folder_path + '/' + image_filename)
-        balance_dataset = np.append(balance_dataset, file_location)
-
+        if ('.jpeg' in image_filename):
+            file_location = os.path.join(folder_path + '/' + image_filename)
+            balance_dataset = np.append(balance_dataset, file_location)
     if (normal_path in folder_path):
         file_name = 'normal_cache.txt'
     else:

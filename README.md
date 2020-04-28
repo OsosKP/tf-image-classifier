@@ -12,7 +12,7 @@ In order to run this project you will need:
 - [pandas](https://pypi.org/project/pandas/)
 - [seaborn](https://pypi.org/project/seaborn/)
 - [matplotlib](https://pypi.org/project/matplotlib/)
-- [Kaggle chest-xray-pneumonia dataset](https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia/tasks)
+- [kaggle chest-xray-pneumonia dataset](https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia/tasks)
 
 ### Running the Project
 

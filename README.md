@@ -1,6 +1,6 @@
 # COMP 47650 (Deep Learning) Group Project
 
-<img align="right" width="150" height="180" src="https://seeklogo.com/images/U/University_College_Dublin_FC-logo-4F4707D61E-seeklogo.com.png">
+<img align="right" width="150" height="190" src="https://seeklogo.com/images/U/University_College_Dublin_FC-logo-4F4707D61E-seeklogo.com.png">
 
 ### Prerequisites
 
@@ -8,7 +8,6 @@ In order to run this project you will need:
 
 - [numpy](https://pypi.org/project/numpy/)
 - [tensorflow](https://pypi.org/project/tensorflow/)
-- [opencv-python](https://pypi.org/project/opencv-python/)
 - [opencv-python](https://pypi.org/project/opencv-python/)
 - [pandas](https://pypi.org/project/pandas/)
 - [seaborn](https://pypi.org/project/seaborn/)

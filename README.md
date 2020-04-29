@@ -22,8 +22,7 @@ After downloading the necessary dependencies listed above, the steps outlined be
 1. Clone or download this repository
 2. Ensure that the downloaded dataset is within the same directory as the  project.
 3. Navigate within the dataset and delete the directory "./chest_xray/chest_xray", as subdirectory contains duplicated data
-4. Run the Preprocessing script by calling "sudo ./core/preprocessing.py"
-5. Open the "model.ipynb" file to train a new model*
+4. Open the "model.ipynb" file to train a new model*
 ```
 
 \* Note that after running an experiment cell, the kernel must be restarted before another is ran
